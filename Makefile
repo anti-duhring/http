@@ -1,5 +1,8 @@
 udpsen:
-	go run ./cmd/udpsender
+	@go run ./cmd/udpsender
 
 tcplis:
-	go run ./cmd/tcplistener
+	@go run ./cmd/tcplistener
+
+test:
+	@go test -v ./...
