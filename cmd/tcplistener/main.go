@@ -16,11 +16,12 @@ func getLinesChannel(conn net.Conn) <-chan string {
 
 		for {
 			b := make([]byte, 8)
-			_, err := conn.Read(b)
+			n, err := conn.Read(b)
 			if err != nil {
 				break
 			}
 
+			b = b[:n]
 			if i := bytes.IndexByte(b, '\n'); i != -1 {
 				str += string(b[:i])
 				b = b[i+1:]
@@ -29,6 +30,11 @@ func getLinesChannel(conn net.Conn) <-chan string {
 			}
 
 			str += string(b)
+
+		}
+
+		if len(str) != 0 {
+			ch <- str
 		}
 	}()
 
