@@ -36,6 +36,58 @@ func TestRequestFromReaderRequestLine(t *testing.T) {
 			input:   "/coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
 			wantErr: true,
 		},
+		{
+			name:    "Invalid method",
+			input:   "SOMETHING /coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
+			wantErr: true,
+		},
+		{
+			name:    "Invalid http version",
+			input:   "SOMETHING /coffee HTTP/1.2\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
+			wantErr: true,
+		},
+		{
+			name:        "Good OPTIONS request with * as target",
+			input:       "OPTIONS * HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
+			wantErr:     false,
+			wantMethod:  "OPTIONS",
+			wantTarget:  "*",
+			wantVersion: "1.1",
+		},
+		{
+			name:    "Invalid GET request with * as target",
+			input:   "GET * HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
+			wantErr: true,
+		},
+		{
+			name:        "Good GET request with origin form as target",
+			input:       "GET /api/v1/users?filter=active&sort=name HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
+			wantErr:     false,
+			wantMethod:  "GET",
+			wantTarget:  "/api/v1/users?filter=active&sort=name",
+			wantVersion: "1.1",
+		},
+		{
+			name:        "Good GET request with absolute form as target",
+			input:       "GET https://www.example.com:8080/path?query=value HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
+			wantErr:     false,
+			wantMethod:  "GET",
+			wantTarget:  "https://www.example.com:8080/path?query=value",
+			wantVersion: "1.1",
+		},
+		{
+			name:        "Good GET request with authority form as target",
+			input:       "GET api.service.internal:9000 HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
+			wantErr:     false,
+			wantMethod:  "GET",
+			wantTarget:  "api.service.internal:9000",
+			wantVersion: "1.1",
+		},
+		{
+			name:    "Invalid GET request by missing port for authority form",
+			input:   "GET example.com HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
+			wantErr: true,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
