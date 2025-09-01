@@ -2,13 +2,10 @@ package request
 
 import (
 	"errors"
-	"fmt"
 	"regexp"
 	"strings"
 
 	"slices"
-
-	"github.com/rotisserie/eris"
 )
 
 var (
@@ -38,6 +35,10 @@ var (
 
 	// Authority Form: host:port
 	authorityFormRegex = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*|(?:[0-9]{1,3}\.){3}[0-9]{1,3}):[0-9]+$`)
+
+	ERR_MALFORMED_REQUEST_LINE = errors.New("malformed request line")
+	ERR_INVALID_METHOD         = errors.New("invalid method")
+	ERR_INVALID_HTTP_VERSION   = errors.New("invalid http version")
 )
 
 type RequestLine struct {
@@ -72,55 +73,55 @@ func isTargetValid(target string, method string) error {
 func parseRequestLine(raw string, req *Request) error {
 	parts := strings.Split(raw, " ")
 	if len(parts) != 3 {
-		return fmt.Errorf("expected 3 params but got %d", len(parts))
+		return ERR_MALFORMED_REQUEST_LINE
 	}
 
 	reqLine := RequestLine{}
 
 	method := parts[0]
 	if method == "" {
-		return fmt.Errorf("invalid method")
+		return ERR_INVALID_METHOD
 	}
 
 	isMethodSupported := slices.Contains(supportedMethods, method)
 	if !isMethodSupported {
-		return fmt.Errorf("invalid method")
+		return ERR_INVALID_METHOD
 	}
 
 	reqLine.Method = method
 
 	target := parts[1]
 	if target == "" {
-		return fmt.Errorf("invalid request target")
+		return ERR_MALFORMED_REQUEST_LINE
 	}
 
 	err := isTargetValid(target, method)
 	if err != nil {
-		return eris.Wrap(err, "calling isTargetValid")
+		return errors.Join(err, ERR_MALFORMED_REQUEST_LINE)
 	}
 
 	reqLine.RequestTarget = target
 
 	httpVersion := parts[2]
 	if httpVersion == "" {
-		return fmt.Errorf("invalid http version")
+		return ERR_INVALID_HTTP_VERSION
 	}
 
 	httpVersionSli := strings.Split(httpVersion, "/")
 
 	protocol := httpVersionSli[0]
 	if protocol != "HTTP" {
-		return fmt.Errorf("invalid http version")
+		return ERR_INVALID_HTTP_VERSION
 	}
 
 	versionNum := httpVersionSli[1]
 	if versionNum == "" {
-		return fmt.Errorf("invalid http version")
+		return ERR_INVALID_HTTP_VERSION
 	}
 
 	isVersionSupported := slices.Contains(supportedHttpVersions, versionNum)
 	if !isVersionSupported {
-		return fmt.Errorf("http version not supported")
+		return ERR_INVALID_HTTP_VERSION
 	}
 
 	reqLine.HttpVersion = versionNum

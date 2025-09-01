@@ -1,11 +1,13 @@
 package request
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"strings"
+)
 
-	"github.com/rotisserie/eris"
+var (
+	ERR_BAD_REQUEST = errors.New("bad request")
 )
 
 type Request struct {
@@ -17,13 +19,13 @@ type Request struct {
 func RequestFromReader(reader io.Reader) (*Request, error) {
 	b, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, eris.Wrap(err, "error calling io.ReadAll")
+		return nil, errors.Join(err, ERR_BAD_REQUEST)
 	}
 
 	raw := string(b)
 	rawSli := strings.Split(raw, "\r\n")
 	if len(rawSli) < 1 {
-		return nil, fmt.Errorf("invalid request")
+		return nil, ERR_BAD_REQUEST
 	}
 
 	req := Request{}
@@ -31,7 +33,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 
 	err = parseRequestLine(reqLine, &req)
 	if err != nil {
-		return nil, eris.Wrap(err, "error calling parseRequestLine")
+		return nil, errors.Join(err, ERR_BAD_REQUEST)
 	}
 
 	return &req, nil
